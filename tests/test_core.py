@@ -18,7 +18,11 @@ from r11_battery.icons import (
     ICON_FONT_SIZE,
     make_icon,
 )
-from r11_battery.startup import launch_command, project_root
+from r11_battery.startup import (
+    clear_stale_startup,
+    launch_command,
+    project_root,
+)
 from r11_battery.tray import TrayApp
 
 
@@ -144,6 +148,30 @@ class StartupSafetyTests(unittest.TestCase):
         self.assertNotIn("&", cmd)
         self.assertNotIn("|", cmd)
         self.assertNotIn(";", cmd)
+
+    def test_clear_stale_startup_removes_other_install(self) -> None:
+        with mock.patch(
+            "r11_battery.startup.get_startup_command",
+            return_value=r'"C:\Old\R11UltraBattery.exe"',
+        ):
+            with mock.patch(
+                "r11_battery.startup.launch_command",
+                return_value=r'"C:\New\R11UltraBattery.exe"',
+            ):
+                with mock.patch(
+                    "r11_battery.startup.set_startup",
+                    return_value=True,
+                ) as set_startup:
+                    self.assertTrue(clear_stale_startup())
+                    set_startup.assert_called_once_with(False)
+
+    def test_clear_stale_startup_keeps_matching_install(self) -> None:
+        cmd = r'"C:\Apps\R11UltraBattery.exe"'
+        with mock.patch("r11_battery.startup.get_startup_command", return_value=cmd):
+            with mock.patch("r11_battery.startup.launch_command", return_value=cmd):
+                with mock.patch("r11_battery.startup.set_startup") as set_startup:
+                    self.assertFalse(clear_stale_startup())
+                    set_startup.assert_not_called()
 
 
 class TrayDisplayTests(unittest.TestCase):

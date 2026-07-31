@@ -54,12 +54,45 @@ def launch_command() -> str:
 
 
 def is_startup_enabled() -> bool:
+    return get_startup_command() is not None
+
+
+def get_startup_command() -> str | None:
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_READ) as key:
-            winreg.QueryValueEx(key, RUN_VALUE)
-            return True
+            value, _ = winreg.QueryValueEx(key, RUN_VALUE)
+            text = str(value).strip()
+            return text or None
+    except OSError:
+        return None
+
+
+def _commands_match(registered: str, current: str) -> bool:
+    return os.path.normcase(registered.strip()) == os.path.normcase(current.strip())
+
+
+def clear_stale_startup() -> bool:
+    """Delete the Run entry when it points at a different install than this process.
+
+    Stops an older extracted build from launching at login after you open a newer
+    copy. Re-enable Start with Windows in the new build if you still want it.
+    """
+    registered = get_startup_command()
+    if registered is None:
+        return False
+    try:
+        current = launch_command()
     except OSError:
         return False
+    if _commands_match(registered, current):
+        return False
+    if set_startup(False):
+        log.info(
+            "Cleared stale Start with Windows entry (was: %s)",
+            registered,
+        )
+        return True
+    return False
 
 
 def set_startup(enabled: bool) -> bool:

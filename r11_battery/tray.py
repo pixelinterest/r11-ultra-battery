@@ -15,6 +15,7 @@ from .device import BatteryReading, read_battery
 from .icons import make_icon
 from .startup import (
     acquire_single_instance,
+    clear_stale_startup,
     is_startup_enabled,
     log_file_path,
     set_startup,
@@ -209,6 +210,7 @@ def main() -> None:
     if not acquire_single_instance():
         log.info("Another instance is already running; exiting")
         return
+    clear_stale_startup()
     TrayApp().run()
 
 

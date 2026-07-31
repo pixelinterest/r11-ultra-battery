@@ -19,7 +19,7 @@ Windows system tray battery monitor for the **Attack Shark R11 Ultra**.
 - Colored battery percent in the tray (green / orange / red; blue while charging)
 - Same font size for 1–3 digit readings
 - Runs in the background with no console window
-- **Start with Windows** toggle (no admin required)
+- **Start with Windows** toggle (no admin required). Opening a newer extract clears a leftover startup entry that still pointed at an old folder — turn the option on again in the new build if you want it.
 - Polls every 30s; keeps the last reading up to 5 minutes on a missed poll
 - Supports 2.4 GHz dongle and USB-C charging
 - Light on resources — skips tray redraws when the reading hasn’t changed, and ignores bad battery replies
