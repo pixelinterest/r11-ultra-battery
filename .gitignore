@@ -1,0 +1,13 @@
+dist/
+build/
+*.spec
+*.build/
+*.dist/
+*.onefile-build/
+packaging/file_version_info.txt
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
