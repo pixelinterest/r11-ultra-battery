@@ -22,6 +22,7 @@ Windows system tray battery monitor for the **Attack Shark R11 Ultra**.
 - **Start with Windows** toggle (no admin required)
 - Polls every 30s; keeps the last reading up to 5 minutes on a missed poll
 - Supports 2.4 GHz dongle and USB-C charging
+- Light on resources — skips tray redraws when the reading hasn’t changed, and ignores bad battery replies
 
 ## Supported modes
 
@@ -59,11 +60,9 @@ Logs: `%LOCALAPPDATA%\R11UltraBattery\tray.log`
 
 Edit constants at the top of [`r11_battery/icons.py`](r11_battery/icons.py), then run from source or rebuild:
 
-| Constant | Default | Notes |
-|----------|---------|--------|
-| `ICON_FONT_SIZE` | `36` | Suggested range **28–40** (below ~28 is hard to read; above ~40 clips `"100"`) |
-| `CHARGING_COLOR_LIGHT` | `(21, 101, 192)` | RGB while charging on a light taskbar |
-| `CHARGING_COLOR_DARK` | `(52, 152, 219)` | RGB while charging on a dark taskbar |
+- **`ICON_FONT_SIZE`** — default `36`. Suggested range **28–40** (below ~28 is hard to read; above ~40 clips `"100"`).
+- **`CHARGING_COLOR_LIGHT`** — default `(21,101,192)`. RGB while charging on a light taskbar.
+- **`CHARGING_COLOR_DARK`** — default `(52,152,219)`. RGB while charging on a dark taskbar.
 
 Battery level colors (green / orange / red) stay theme-aware and are not configurable there.
 
