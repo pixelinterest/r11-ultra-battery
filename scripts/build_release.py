@@ -74,7 +74,7 @@ def sha256(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", default="0.1.2")
+    parser.add_argument("--version", default="0.1.3")
     args = parser.parse_args()
 
     version_file = ROOT / "packaging" / "file_version_info.txt"
