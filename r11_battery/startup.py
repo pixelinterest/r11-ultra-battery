@@ -82,11 +82,13 @@ def acquire_single_instance() -> bool:
     """Return False if another instance is already running."""
     global _mutex_handle
     try:
-        _mutex_handle = ctypes.windll.kernel32.CreateMutexW(None, False, MUTEX_NAME)
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetLastError(0)
+        _mutex_handle = kernel32.CreateMutexW(None, False, MUTEX_NAME)
         if not _mutex_handle:
             return True
-        if ctypes.windll.kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
-            ctypes.windll.kernel32.CloseHandle(_mutex_handle)
+        if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+            kernel32.CloseHandle(_mutex_handle)
             _mutex_handle = None
             return False
         return True

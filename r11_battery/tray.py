@@ -29,15 +29,20 @@ class TrayApp:
         self._reading: BatteryReading | None = None
         self._reading_at: float | None = None
         self._showing_stale = False
+        self._icon_key: tuple | None = None
+        self._title_key: tuple | None = None
         self._stop = threading.Event()
         self._lock = threading.Lock()
         self._poll_lock = threading.Lock()
+        # One stable menu with callables — avoids recreating Win32 HMENU churn.
         self.icon = pystray.Icon(
             "r11-ultra-battery",
             make_icon(None),
             "R11 Ultra Battery Tracker",
             menu=self._build_menu(),
         )
+        self._icon_key = self._icon_key_for(None)
+        self._title_key = self._title_key_for(None, stale=False)
 
     def _status_text(self) -> str:
         with self._lock:
@@ -66,18 +71,39 @@ class TrayApp:
             pystray.MenuItem("Quit", self._on_quit),
         )
 
-    def _refresh_menu(self) -> None:
-        self.icon.menu = self._build_menu()
-        if hasattr(self.icon, "update_menu"):
-            self.icon.update_menu()
+    @staticmethod
+    def _icon_key_for(reading: BatteryReading | None) -> tuple:
+        if reading is None:
+            return (None, False)
+        return (reading.percent, reading.charging)
+
+    @staticmethod
+    def _title_key_for(reading: BatteryReading | None, *, stale: bool) -> tuple:
+        if reading is None:
+            return (None, False, False)
+        return (reading.percent, reading.charging, stale)
 
     def _apply_display(self, reading: BatteryReading | None, *, stale: bool) -> None:
+        icon_key = self._icon_key_for(reading)
+        title_key = self._title_key_for(reading, stale=stale)
         with self._lock:
             self._reading = reading
             self._showing_stale = stale
-        self.icon.icon = make_icon(reading)
-        self.icon.title = self._status_text()
-        self._refresh_menu()
+            icon_changed = icon_key != self._icon_key
+            title_changed = title_key != self._title_key
+            if icon_changed:
+                self._icon_key = icon_key
+            if title_changed:
+                self._title_key = title_key
+
+        # Icon assignment recreates a Win32 HICON; skip when pixels would match.
+        if icon_changed:
+            self.icon.icon = make_icon(reading)
+        if title_changed:
+            self.icon.title = self._status_text()
+            # Menu texts are callables; refresh the native menu once (DestroyMenu
+            # + recreate). Do not reassign icon.menu — that would rebuild twice.
+            self.icon.update_menu()
 
     def _poll_once(self) -> None:
         if not self._poll_lock.acquire(blocking=False):
@@ -90,43 +116,46 @@ class TrayApp:
     def _poll_once_unlocked(self) -> None:
         try:
             reading = read_battery()
-        except OSError:
+        except Exception:
             log.exception("Battery poll failed")
             reading = None
 
         now = time.monotonic()
-        if reading is not None:
+        try:
+            if reading is not None:
+                with self._lock:
+                    self._reading_at = now
+                self._apply_display(reading, stale=False)
+                log.debug(
+                    "Battery %s%% (%s) pid=0x%04x",
+                    reading.percent,
+                    reading.state_label,
+                    reading.product_id,
+                )
+                return
+
             with self._lock:
-                self._reading_at = now
-            self._apply_display(reading, stale=False)
-            log.debug(
-                "Battery %s%% (%s) pid=0x%04x",
-                reading.percent,
-                reading.state_label,
-                reading.product_id,
-            )
-            return
+                cached = self._reading
+                cached_at = self._reading_at
+            if (
+                cached is not None
+                and cached_at is not None
+                and (now - cached_at) <= proto.STALE_READING_SEC
+            ):
+                self._apply_display(cached, stale=True)
+                log.debug(
+                    "Poll missed; keeping last reading %s%% (%.0fs old)",
+                    cached.percent,
+                    now - cached_at,
+                )
+                return
 
-        with self._lock:
-            cached = self._reading
-            cached_at = self._reading_at
-        if (
-            cached is not None
-            and cached_at is not None
-            and (now - cached_at) <= proto.STALE_READING_SEC
-        ):
-            self._apply_display(cached, stale=True)
-            log.debug(
-                "Poll missed; keeping last reading %s%% (%.0fs old)",
-                cached.percent,
-                now - cached_at,
-            )
-            return
-
-        with self._lock:
-            self._reading_at = None
-        self._apply_display(None, stale=False)
-        log.debug("Mouse not found / no battery reply")
+            with self._lock:
+                self._reading_at = None
+            self._apply_display(None, stale=False)
+            log.debug("Mouse not found / no battery reply")
+        except Exception:
+            log.exception("Failed to update tray display")
 
     def _poll_loop(self) -> None:
         while not self._stop.is_set():
@@ -134,20 +163,21 @@ class TrayApp:
             self._stop.wait(self.poll_interval)
 
     def _on_refresh(self, _icon=None, _item=None) -> None:
-        threading.Thread(target=self._poll_once, daemon=True).start()
+        # Reuse the poll lock; skip if a poll is already in flight.
+        threading.Thread(target=self._poll_once, daemon=True, name="r11-refresh").start()
 
     def _on_toggle_startup(self, _icon=None, _item=None) -> None:
         enabled = not is_startup_enabled()
         if set_startup(enabled):
             log.info("Start with Windows: %s", "on" if enabled else "off")
-        self._refresh_menu()
+        self.icon.update_menu()
 
     def _on_quit(self, _icon=None, _item=None) -> None:
         self._stop.set()
         self.icon.stop()
 
     def run(self) -> None:
-        threading.Thread(target=self._poll_loop, daemon=True).start()
+        threading.Thread(target=self._poll_loop, daemon=True, name="r11-poll").start()
         self.icon.run()
 
 
@@ -171,7 +201,11 @@ def _configure_logging() -> None:
 
 
 def main() -> None:
-    _configure_logging()
+    try:
+        _configure_logging()
+    except OSError:
+        logging.basicConfig(level=logging.INFO)
+        log.exception("Could not open log file; continuing with basic logging")
     if not acquire_single_instance():
         log.info("Another instance is already running; exiting")
         return

@@ -80,7 +80,8 @@ def main() -> int:
 
     print()
     print("=== Compx (0x3554) product IDs seen ===")
-    for pid in sorted({c.product_id for c in enumerate_compx()}):
+    compx_devices = devices if not args.all else enumerate_compx()
+    for pid in sorted({c.product_id for c in compx_devices}):
         if pid == proto.PID_WIRELESS:
             role = "wireless"
         elif pid == proto.PID_WIRED:

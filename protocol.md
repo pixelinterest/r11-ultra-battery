@@ -34,4 +34,6 @@ Response layout:
 | 6 | Battery percent (0–100) |
 | 7 | Wired / charging flag (`0` wireless, `1` cable) |
 | 8–9 | Cell voltage mV (big-endian, optional) |
-| 16 | Checksum |
+| 16 | Checksum (all 17 bytes sum to `0x55` mod 256) |
+
+Parsers reject frames that fail the checksum, report id/sub-command, or percent range checks.

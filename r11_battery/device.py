@@ -71,7 +71,8 @@ def enumerate_all() -> list[HidCollection]:
 
 
 def enumerate_compx() -> list[HidCollection]:
-    return [c for c in enumerate_all() if c.vendor_id == proto.VID]
+    # Vendor filter avoids scanning every HID device on the system each poll.
+    return [_info_to_collection(info) for info in hid.enumerate(proto.VID, 0)]
 
 
 def battery_collections() -> list[HidCollection]:
@@ -96,7 +97,12 @@ def battery_collections() -> list[HidCollection]:
     return matched
 
 
-def _transact(path: bytes, report: list[int], read_length: int, delay: float) -> list[int] | None:
+def _transact(
+    path: bytes,
+    report: bytes | list[int],
+    read_length: int,
+    delay: float,
+) -> list[int] | None:
     device = hid.device()
     try:
         device.open_path(path)
@@ -104,6 +110,7 @@ def _transact(path: bytes, report: list[int], read_length: int, delay: float) ->
             if not device.read(64, timeout_ms=1):
                 break
 
+        report_id = report[0]
         for attempt in range(3):
             written = device.write(report)
             if written is None or written < 0:
@@ -117,11 +124,11 @@ def _transact(path: bytes, report: list[int], read_length: int, delay: float) ->
                 if not res:
                     continue
                 data = list(res)
-                if data[0] == report[0]:
+                if data[0] == report_id:
                     return data[:read_length] if len(data) >= read_length else data
             log.warning("HID read timeout (attempt %s)", attempt + 1)
         return None
-    except OSError as exc:
+    except Exception as exc:
         log.warning("HID transaction failed: %s", exc)
         return None
     finally:

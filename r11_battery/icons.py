@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import time
 import winreg
+from collections import OrderedDict
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -18,11 +20,22 @@ ICON_FONT_SIZE = 36
 CHARGING_COLOR_LIGHT = (21, 101, 192)
 CHARGING_COLOR_DARK = (52, 152, 219)
 
+_THEME_TTL_SEC = 5.0
+_ICON_CACHE_MAX = 48
+
 _FONT_CACHE: dict[int, ImageFont.ImageFont] = {}
-_ICON_CACHE: dict[tuple, Image.Image] = {}
+_ICON_CACHE: OrderedDict[tuple, Image.Image] = OrderedDict()
+_THEME_CACHE: tuple[float, bool] | None = None
 
 
 def _is_light_mode() -> bool:
+    global _THEME_CACHE
+    now = time.monotonic()
+    cached = _THEME_CACHE
+    if cached is not None and (now - cached[0]) < _THEME_TTL_SEC:
+        return cached[1]
+
+    light = False
     try:
         with winreg.OpenKey(
             winreg.HKEY_CURRENT_USER,
@@ -31,9 +44,12 @@ def _is_light_mode() -> bool:
             winreg.KEY_READ,
         ) as key:
             val, _ = winreg.QueryValueEx(key, "SystemUsesLightTheme")
-            return val == 1
+            light = val == 1
     except OSError:
-        return False
+        light = False
+
+    _THEME_CACHE = (now, light)
+    return light
 
 
 def _font(size: int) -> ImageFont.ImageFont:
@@ -57,7 +73,6 @@ def _text_color(percent: int | None, *, charging: bool, light: bool) -> tuple[in
         return (70, 70, 70) if light else (170, 170, 170)
     if charging:
         return CHARGING_COLOR_LIGHT if light else CHARGING_COLOR_DARK
-
     if percent >= 50:
         return (30, 140, 60) if light else (46, 204, 113)
     if percent >= 20:
@@ -74,9 +89,10 @@ def make_icon(reading: BatteryReading | None, size: int = 64) -> Image.Image:
         text = str(reading.percent)
         color = _text_color(reading.percent, charging=reading.charging, light=light)
 
-    cache_key = (text, color, light, size, ICON_FONT_SIZE, CHARGING_COLOR_LIGHT, CHARGING_COLOR_DARK)
+    cache_key = (text, color, size, ICON_FONT_SIZE)
     cached = _ICON_CACHE.get(cache_key)
     if cached is not None:
+        _ICON_CACHE.move_to_end(cache_key)
         return cached
 
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -87,7 +103,7 @@ def make_icon(reading: BatteryReading | None, size: int = 64) -> Image.Image:
     y = (size - (bottom - top)) / 2 - top
     draw.text((x, y), text, fill=(*color, 255), font=font)
 
-    if len(_ICON_CACHE) > 40:
-        _ICON_CACHE.clear()
     _ICON_CACHE[cache_key] = image
+    while len(_ICON_CACHE) > _ICON_CACHE_MAX:
+        _ICON_CACHE.popitem(last=False)
     return image
