@@ -8,6 +8,16 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .device import BatteryReading
 
+# Tray percent font size (icon is 64x64). Suggested range: 28–40.
+# Below ~28 is hard to read; above ~40 clips three-digit values like "100".
+ICON_FONT_SIZE = 36
+
+# Charging percent color as RGB 0–255 (used when the mouse reports charging).
+# Light / dark track Windows taskbar theme. Examples: cyan (0, 180, 200),
+# purple (155, 89, 182), white (240, 240, 240).
+CHARGING_COLOR_LIGHT = (21, 101, 192)
+CHARGING_COLOR_DARK = (52, 152, 219)
+
 _FONT_CACHE: dict[int, ImageFont.ImageFont] = {}
 _ICON_CACHE: dict[tuple, Image.Image] = {}
 
@@ -46,7 +56,8 @@ def _text_color(percent: int | None, *, charging: bool, light: bool) -> tuple[in
     if percent is None:
         return (70, 70, 70) if light else (170, 170, 170)
     if charging:
-        return (21, 101, 192) if light else (52, 152, 219)
+        return CHARGING_COLOR_LIGHT if light else CHARGING_COLOR_DARK
+
     if percent >= 50:
         return (30, 140, 60) if light else (46, 204, 113)
     if percent >= 20:
@@ -63,14 +74,14 @@ def make_icon(reading: BatteryReading | None, size: int = 64) -> Image.Image:
         text = str(reading.percent)
         color = _text_color(reading.percent, charging=reading.charging, light=light)
 
-    cache_key = (text, color, light, size)
+    cache_key = (text, color, light, size, ICON_FONT_SIZE, CHARGING_COLOR_LIGHT, CHARGING_COLOR_DARK)
     cached = _ICON_CACHE.get(cache_key)
     if cached is not None:
         return cached
 
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    font = _font(54 if len(text) <= 2 else 34)
+    font = _font(ICON_FONT_SIZE)
     left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
     x = (size - (right - left)) / 2 - left
     y = (size - (bottom - top)) / 2 - top

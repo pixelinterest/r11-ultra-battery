@@ -41,11 +41,12 @@ jobs:
             R11 Ultra Battery Tracker — Windows system tray battery monitor for the Attack Shark R11 Ultra.
 
             ### Features
-            - Live colored percent in the system tray
+            - Live colored percent in the system tray (consistent font size for 1–3 digits)
             - 2.4 GHz dongle (`0x3554:0xFB44`) and USB-C (`0x3554:0xFB43`)
             - Start with Windows toggle
             - Background launch (no console)
             - Keeps last reading up to 5 minutes on a missed poll
+            - Source builds: tweak tray font size / charging color in `r11_battery/icons.py`
 
             ### Install
             1. Download **R11UltraBattery-windows.zip**
