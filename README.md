@@ -1,4 +1,4 @@
-# R11 Ultra Battery
+# R11 Ultra Battery Tracker
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?logo=windows&logoColor=white)](https://github.com/pixelinterest/r11-ultra-battery)
 [![Release](https://img.shields.io/github/v/release/pixelinterest/r11-ultra-battery?color=28a745)](https://github.com/pixelinterest/r11-ultra-battery/releases/latest)
@@ -9,6 +9,8 @@
 Windows system tray battery monitor for the **Attack Shark R11 Ultra**.
 
 **[Download latest release](https://github.com/pixelinterest/r11-ultra-battery/releases/latest)**
+
+![Tray icon and menu](assets/tray.png)
 
 ---
 

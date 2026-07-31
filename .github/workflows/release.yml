@@ -38,7 +38,7 @@ jobs:
           generate_release_notes: false
           fail_on_unmatched_files: true
           body: |
-            Windows system tray battery monitor for the Attack Shark R11 Ultra.
+            R11 Ultra Battery Tracker — Windows system tray battery monitor for the Attack Shark R11 Ultra.
 
             ### Features
             - Live colored percent in the system tray

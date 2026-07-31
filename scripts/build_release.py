@@ -46,12 +46,12 @@ VSVersionInfo(
         "040904B0",
         [
           StringStruct("CompanyName", "pixelinterest"),
-          StringStruct("FileDescription", "Attack Shark R11 Ultra battery tray monitor"),
+          StringStruct("FileDescription", "Attack Shark R11 Ultra battery tracker"),
           StringStruct("FileVersion", "{dotted}"),
           StringStruct("InternalName", "{APP_NAME}"),
           StringStruct("LegalCopyright", "Copyright (c) pixelinterest"),
           StringStruct("OriginalFilename", "{APP_NAME}.exe"),
-          StringStruct("ProductName", "R11 Ultra Battery"),
+          StringStruct("ProductName", "R11 Ultra Battery Tracker"),
           StringStruct("ProductVersion", "{dotted}"),
         ],
       )

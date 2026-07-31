@@ -35,7 +35,7 @@ class TrayApp:
         self.icon = pystray.Icon(
             "r11-ultra-battery",
             make_icon(None),
-            "R11 Ultra Battery",
+            "R11 Ultra Battery Tracker",
             menu=self._build_menu(),
         )
 
